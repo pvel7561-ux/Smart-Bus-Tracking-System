@@ -1,12 +1,19 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import busService from '../services/busService';
 
 const BusCard = ({ bus }) => {
   const isActive = bus.status === 'active';
   const hasLocation = !!bus.latest_location;
 
+  const nextStop = useMemo(() => {
+    const stops = bus.route?.stops || bus.route_details?.stops || [];
+    if (!hasLocation || stops.length === 0) return null;
+    return busService.findNextUpcomingStop(bus.latest_location, stops, bus.latest_location.speed || 0);
+  }, [bus, hasLocation]);
+
   return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+    <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
           <div>
@@ -19,7 +26,7 @@ const BusCard = ({ bus }) => {
           </div>
           <span className={`badge badge-${bus.status}`}>
             {isActive && <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#10b981', boxShadow: '0 0 6px #10b981' }}></span>}
-            {bus.status}
+            {bus.status.toUpperCase()}
           </span>
         </div>
 
@@ -29,7 +36,7 @@ const BusCard = ({ bus }) => {
           border: '1px solid #fed7aa',
           padding: '10px 14px',
           borderRadius: 'var(--radius)',
-          marginBottom: 14
+          marginBottom: 12
         }}>
           <div style={{ fontSize: 11, color: '#b45309', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             Operating Route
@@ -45,6 +52,35 @@ const BusCard = ({ bus }) => {
             </div>
           )}
         </div>
+
+        {/* Next Upcoming Bus Stop (Ola/Uber style preview) */}
+        {nextStop?.stop && (
+          <div style={{
+            backgroundColor: '#fef3c7',
+            border: '1px solid #fde68a',
+            padding: '8px 12px',
+            borderRadius: 'var(--radius)',
+            marginBottom: 12,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <div>
+              <div style={{ fontSize: 10, color: '#92400e', fontWeight: 800, textTransform: 'uppercase' }}>
+                Next Bus Stop
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#78350f' }}>
+                📍 {nextStop.stop.stop_name}
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 10, color: '#92400e', fontWeight: 800 }}>ETA</div>
+              <div style={{ fontSize: 12, fontWeight: 900, color: '#16a34a' }}>
+                ~{nextStop.etaMinutes}m
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Driver & Location Specs */}
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 16 }}>

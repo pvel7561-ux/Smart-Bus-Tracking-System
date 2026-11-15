@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import busService from '../services/busService';
 
 // Fix for default Leaflet icon paths in Vite / React
 delete L.Icon.Default.prototype._getIconUrl;
@@ -20,8 +21,8 @@ export const createBusIcon = (busNumber, isActive = true, heading = 0) => {
     html: `
       <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
         <div style="
-          width: 42px;
-          height: 42px;
+          width: 44px;
+          height: 44px;
           border-radius: 50%;
           background: ${bgColor};
           border: 3.5px solid ${ringColor};
@@ -32,7 +33,7 @@ export const createBusIcon = (busNumber, isActive = true, heading = 0) => {
           color: white;
           ${isActive ? 'animation: pulse 2s infinite;' : ''}
         ">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
             <path d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6H6V6h12v5z"/>
           </svg>
         </div>
@@ -41,8 +42,8 @@ export const createBusIcon = (busNumber, isActive = true, heading = 0) => {
           color: #fef08a;
           font-weight: 800;
           font-size: 11px;
-          padding: 2px 7px;
-          border-radius: 5px;
+          padding: 2px 8px;
+          border-radius: 6px;
           margin-top: 3px;
           white-space: nowrap;
           box-shadow: 0 2px 6px rgba(0,0,0,0.3);
@@ -52,39 +53,95 @@ export const createBusIcon = (busNumber, isActive = true, heading = 0) => {
         </div>
       </div>
     `,
-    iconSize: [46, 58],
-    iconAnchor: [23, 29],
-    popupAnchor: [0, -30],
+    iconSize: [48, 62],
+    iconAnchor: [24, 31],
+    popupAnchor: [0, -32],
   });
 };
 
-// Custom Bus Stop Icon in Amber/Yellow
-export const createStopIcon = (stopOrder, isTerminal = false) => {
-  const bg = isTerminal ? '#ef4444' : '#f59e0b';
-  const textColor = isTerminal ? '#ffffff' : '#78350f';
+// Ola/Uber Style Custom Bus Stop Marker with Actual Stop Name Visible on Map
+export const createStopIcon = (stop, isStart = false, isEnd = false, isNext = false) => {
+  const stopName = typeof stop === 'object' ? (stop.stop_name || `Stop ${stop.stop_order || ''}`) : `Stop ${stop}`;
+  const stopOrder = typeof stop === 'object' ? (stop.stop_order || 1) : stop;
+
+  let badgeBg = '#ffffff';
+  let badgeBorder = '#f59e0b';
+  let badgeText = '#78350f';
+  let pinColor = '#f59e0b';
+  let pinLabel = `${stopOrder}`;
+
+  if (isStart) {
+    badgeBg = '#ecfdf5';
+    badgeBorder = '#10b981';
+    badgeText = '#065f46';
+    pinColor = '#10b981';
+    pinLabel = 'Start';
+  } else if (isEnd) {
+    badgeBg = '#fef2f2';
+    badgeBorder = '#ef4444';
+    badgeText = '#991b1b';
+    pinColor = '#ef4444';
+    pinLabel = 'End';
+  } else if (isNext) {
+    badgeBg = '#fff7ed';
+    badgeBorder = '#ea580c';
+    badgeText = '#9a3412';
+    pinColor = '#ea580c';
+  }
+
+  const nextPulseStyle = isNext
+    ? 'animation: pulse 1.8s infinite; box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.4); border-color: #ea580c;'
+    : '';
+
   return L.divIcon({
     className: 'custom-stop-marker',
     html: `
-      <div style="
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        background: ${bg};
-        border: 2.5px solid #ffffff;
-        box-shadow: 0 3px 8px rgba(0,0,0,0.3);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: ${textColor};
-        font-weight: 900;
-        font-size: 12px;
-      ">
-        ${stopOrder}
+      <div style="display: flex; flex-direction: column; align-items: center; pointer-events: auto; cursor: pointer;">
+        <!-- Stop Name Pill with Visible Name on Map -->
+        <div style="
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: ${badgeBg};
+          border: 1.5px solid ${badgeBorder};
+          border-radius: 14px;
+          padding: 3px 9px 3px 4px;
+          box-shadow: 0 3px 10px rgba(0,0,0,0.18);
+          white-space: nowrap;
+          font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+          ${nextPulseStyle}
+        ">
+          <span style="
+            min-width: 18px;
+            height: 18px;
+            padding: 0 4px;
+            border-radius: 10px;
+            background: ${pinColor};
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+          ">${pinLabel}</span>
+          <span style="
+            font-size: 11px;
+            font-weight: 800;
+            color: ${badgeText};
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          ">${stopName}</span>
+          ${isNext ? '<span style="font-size: 9px; background: #ea580c; color: white; padding: 1px 5px; border-radius: 4px; font-weight: 800; letter-spacing: 0.3px;">NEXT</span>' : ''}
+        </div>
+        <!-- Pointer Pin -->
+        <div style="width: 2px; height: 5px; background: ${badgeBorder};"></div>
+        <div style="width: 7px; height: 7px; border-radius: 50%; background: ${pinColor}; border: 1.5px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>
       </div>
     `,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-    popupAnchor: [0, -15],
+    iconSize: [180, 40],
+    iconAnchor: [90, 40],
+    popupAnchor: [0, -42],
   });
 };
 
@@ -110,7 +167,7 @@ const MapBoundsFitter = ({ bounds }) => {
 
   useEffect(() => {
     if (bounds && bounds.length > 1 && !fittedRef.current) {
-      map.fitBounds(bounds, { padding: [50, 50] });
+      map.fitBounds(bounds, { padding: [60, 60] });
       fittedRef.current = true;
     }
   }, [bounds, map]);
@@ -127,7 +184,8 @@ const BusMap = ({
   selectedBusId = null,
   followBus = false,
   height = '500px',
-  onBusSelect = null
+  onBusSelect = null,
+  nextStopId = null
 }) => {
   const boundsCoords = [];
   buses.forEach((b) => {
@@ -142,12 +200,27 @@ const BusMap = ({
   });
 
   let activeCenter = center;
+  let activeBus = null;
   if (selectedBusId) {
-    const selected = buses.find((b) => b.id === selectedBusId);
-    if (selected?.latest_location) {
-      activeCenter = [selected.latest_location.latitude, selected.latest_location.longitude];
+    activeBus = buses.find((b) => b.id === selectedBusId);
+    if (activeBus?.latest_location) {
+      activeCenter = [activeBus.latest_location.latitude, activeBus.latest_location.longitude];
     }
+  } else if (buses.length > 0 && buses[0].latest_location) {
+    activeBus = buses[0];
   }
+
+  // Determine which stop is the next stop if not explicitly provided
+  let computedNextStop = null;
+  if (activeBus?.latest_location && stops.length > 0) {
+    computedNextStop = busService.findNextUpcomingStop(
+      activeBus.latest_location,
+      stops,
+      activeBus.latest_location.speed || 0
+    );
+  }
+
+  const effectiveNextStopId = nextStopId || computedNextStop?.stop?.id;
 
   return (
     <div style={{
@@ -189,25 +262,72 @@ const BusMap = ({
           />
         )}
 
-        {/* Bus Stop Markers */}
+        {/* Bus Stop Markers with Visible Stop Names on Map */}
         {stops.map((stop, idx) => {
-          const isTerminal = idx === 0 || idx === stops.length - 1;
+          const isStart = idx === 0;
+          const isEnd = idx === stops.length - 1;
+          const isNext = stop.id === effectiveNextStopId;
+
+          // Calculate distance from active bus to this stop
+          let distanceStr = null;
+          let etaStr = null;
+          if (activeBus?.latest_location) {
+            const dist = busService.calculateDistance(
+              activeBus.latest_location.latitude,
+              activeBus.latest_location.longitude,
+              stop.latitude,
+              stop.longitude
+            );
+            distanceStr = dist < 1 ? `${Math.round(dist * 1000)} meters away` : `${dist.toFixed(1)} km away`;
+            const speed = activeBus.latest_location.speed > 5 ? activeBus.latest_location.speed : 25;
+            const etaMin = Math.max(1, Math.round((dist / speed) * 60));
+            etaStr = dist < 0.1 ? 'Arrived / At Stop' : `~${etaMin} min${etaMin > 1 ? 's' : ''}`;
+          }
+
           return (
             <Marker
               key={`stop-${stop.id || idx}`}
               position={[stop.latitude, stop.longitude]}
-              icon={createStopIcon(stop.stop_order || idx + 1, isTerminal)}
+              icon={createStopIcon(stop, isStart, isEnd, isNext)}
             >
               <Popup>
-                <div style={{ minWidth: 160 }}>
-                  <div style={{ fontSize: 11, color: isTerminal ? '#ef4444' : '#b45309', fontWeight: 800, textTransform: 'uppercase' }}>
-                    {idx === 0 ? 'Starting Point' : idx === stops.length - 1 ? 'Final Destination' : `Stop #${stop.stop_order || idx + 1}`}
+                <div style={{ minWidth: 200, padding: '2px 4px' }}>
+                  <div style={{
+                    fontSize: 11,
+                    color: isStart ? '#10b981' : isEnd ? '#ef4444' : isNext ? '#ea580c' : '#b45309',
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}>
+                    {isNext && <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#ea580c' }} />}
+                    {isStart ? '🏁 Starting Terminal' : isEnd ? '🏁 Final Destination' : isNext ? '📍 Next Upcoming Stop' : `Transit Stop #${stop.stop_order}`}
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: '#1c1917', marginTop: 2 }}>
+
+                  <div style={{ fontSize: 16, fontWeight: 800, color: '#1c1917', marginTop: 4 }}>
                     {stop.stop_name}
                   </div>
-                  <div style={{ fontSize: 11, color: '#78350f', marginTop: 4 }}>
-                    Coordinates: {stop.latitude.toFixed(4)}, {stop.longitude.toFixed(4)}
+
+                  {distanceStr && (
+                    <div style={{
+                      backgroundColor: '#fff7ed',
+                      border: '1px solid #fed7aa',
+                      padding: '6px 10px',
+                      borderRadius: 6,
+                      marginTop: 8,
+                      fontSize: 12,
+                      color: '#9a3412',
+                      fontWeight: 700
+                    }}>
+                      <div>📍 Distance: {distanceStr}</div>
+                      <div>⏱️ Estimated Arrival: {etaStr}</div>
+                    </div>
+                  )}
+
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 8 }}>
+                    Sequence: <strong>Stop {stop.stop_order} of {stops.length}</strong>
                   </div>
                 </div>
               </Popup>
@@ -237,9 +357,9 @@ const BusMap = ({
               }}
             >
               <Popup>
-                <div style={{ minWidth: 200, padding: 4 }}>
+                <div style={{ minWidth: 220, padding: 4 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <span style={{ fontSize: 15, fontWeight: 800, color: '#1c1917' }}>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: '#1c1917' }}>
                       {bus.bus_number}
                     </span>
                     <span className={`badge badge-${bus.status}`}>
@@ -255,9 +375,25 @@ const BusMap = ({
                     <strong>Driver:</strong> {bus.driver?.name || bus.driver_details?.name || 'Unassigned'}
                   </div>
 
-                  <div style={{ fontSize: 12, color: '#ea580c', fontWeight: 700, marginBottom: 8 }}>
-                    <strong>Speed:</strong> {Math.round(bus.latest_location.speed || 0)} km/h
+                  <div style={{ fontSize: 12, color: '#ea580c', fontWeight: 800, marginBottom: 8 }}>
+                    <strong>Live Speed:</strong> {Math.round(bus.latest_location.speed || 0)} km/h
                   </div>
+
+                  {computedNextStop && (
+                    <div style={{
+                      backgroundColor: '#fff7ed',
+                      border: '1px solid #fed7aa',
+                      borderRadius: 6,
+                      padding: '6px 8px',
+                      fontSize: 12,
+                      color: '#9a3412',
+                      marginBottom: 8
+                    }}>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: '#ea580c', textTransform: 'uppercase' }}>Next Stop</div>
+                      <div style={{ fontWeight: 800 }}>{computedNextStop.stop_name}</div>
+                      <div style={{ fontSize: 11 }}>{computedNextStop.distanceKm} km away • {computedNextStop.etaMinutes}</div>
+                    </div>
+                  )}
 
                   <div style={{ fontSize: 11, color: '#94a3b8', borderTop: '1px solid #fed7aa', paddingTop: 6 }}>
                     Last GPS update: {new Date(bus.latest_location.timestamp).toLocaleTimeString()}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import busService from '../services/busService';
 import BusMap from '../components/BusMap';
@@ -81,7 +81,16 @@ const PassengerDashboard = () => {
     return true;
   });
 
-  const activeStops = selectedBus?.route?.stops || [];
+  const activeStops = useMemo(() => {
+    const raw = selectedBus?.route?.stops || [];
+    return [...raw].sort((a, b) => a.stop_order - b.stop_order);
+  }, [selectedBus]);
+
+  // Next stop calculation for selected bus
+  const selectedNextStop = useMemo(() => {
+    if (!selectedBus?.latest_location || activeStops.length === 0) return null;
+    return busService.findNextUpcomingStop(selectedBus.latest_location, activeStops, selectedBus.latest_location.speed || 0);
+  }, [selectedBus, activeStops]);
 
   return (
     <div>
@@ -92,7 +101,7 @@ const PassengerDashboard = () => {
             Passenger Live Bus Tracker
           </h1>
           <p style={{ fontSize: 14, color: 'var(--gray-500)' }}>
-            Find your bus, track live road movements, and check upcoming stops
+            Find your bus, track live road movements, and check upcoming named bus stops
           </p>
         </div>
 
@@ -158,13 +167,22 @@ const PassengerDashboard = () => {
         </div>
       </div>
 
-      {/* Live Interactive Map Showcase */}
+      {/* Live Interactive Map Showcase with Named Stop Pills */}
       <div className="card" style={{ marginBottom: 28 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
           <div>
             <div className="card-title">Live City Transit Map</div>
             <div className="card-subtitle" style={{ marginBottom: 0 }}>
-              {selectedBus ? `Tracking ${selectedBus.bus_number} on ${selectedBus.route?.name || 'Assigned Route'}` : 'Click any bus marker to focus'}
+              {selectedBus ? (
+                <span>
+                  Tracking <strong>{selectedBus.bus_number}</strong> ({selectedBus.route?.starting_point} ➔ {selectedBus.route?.destination})
+                  {selectedNextStop?.stop && (
+                    <strong style={{ color: '#d97706', marginLeft: 8 }}>
+                      • Next: {selectedNextStop.stop.stop_name} (~{selectedNextStop.etaMinutes}m)
+                    </strong>
+                  )}
+                </span>
+              ) : 'Click any bus marker to view its route stops'}
             </div>
           </div>
           {selectedBus && (
@@ -182,6 +200,7 @@ const PassengerDashboard = () => {
           stops={activeStops}
           height="480px"
           selectedBusId={selectedBus?.id}
+          nextStopId={selectedNextStop?.stop?.id}
           onBusSelect={(bus) => setSelectedBus(bus)}
         />
       </div>

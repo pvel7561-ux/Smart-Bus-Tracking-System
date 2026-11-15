@@ -12,7 +12,15 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    host: true,
-    cors: true
+    host: '0.0.0.0', // Listen on all network interfaces
+    strictPort: true,
+    cors: true,
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
   }
 })

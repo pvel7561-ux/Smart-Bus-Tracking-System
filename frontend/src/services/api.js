@@ -1,11 +1,10 @@
 import axios from 'axios';
 
 // Dynamically determine the backend API URL.
-// When testing from a mobile phone on the same Wi-Fi network,
-// window.location.hostname will be the computer's LAN IP address.
+// When using Vite with the proxy, relative '/api' forwards seamlessly to Django,
+// so requests work identically on localhost, LAN IP (e.g. 10.39.223.65), and public tunnels.
 const getBaseUrl = () => {
-  const hostname = window.location.hostname || 'localhost';
-  return `http://${hostname}:8000/api`;
+  return '/api';
 };
 
 const api = axios.create({

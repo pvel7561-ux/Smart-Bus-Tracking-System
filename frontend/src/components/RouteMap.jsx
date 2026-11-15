@@ -98,19 +98,31 @@ const RouteMap = ({ route, stops = [], height = '400px' }) => {
           />
         )}
 
-        {stops.map((stop, idx) => (
-          <Marker
-            key={`route-stop-${stop.id || idx}`}
-            position={[stop.latitude, stop.longitude]}
-            icon={createStopIcon(stop.stop_order || idx + 1, idx === 0 || idx === stops.length - 1)}
-          >
-            <Popup>
-              <strong>{stop.stop_name}</strong><br />
-              Stop #{stop.stop_order}<br />
-              Lat: {stop.latitude.toFixed(4)}, Lon: {stop.longitude.toFixed(4)}
-            </Popup>
-          </Marker>
-        ))}
+        {stops.map((stop, idx) => {
+          const isStart = idx === 0;
+          const isEnd = idx === stops.length - 1;
+          return (
+            <Marker
+              key={`route-stop-${stop.id || idx}`}
+              position={[stop.latitude, stop.longitude]}
+              icon={createStopIcon(stop, isStart, isEnd)}
+            >
+              <Popup>
+                <div style={{ minWidth: 170, padding: 2 }}>
+                  <div style={{ fontSize: 11, color: isStart ? '#10b981' : isEnd ? '#ef4444' : '#ea580c', fontWeight: 800, textTransform: 'uppercase' }}>
+                    {isStart ? '🏁 Starting Terminal' : isEnd ? '🏁 Final Destination' : `Transit Stop #${stop.stop_order}`}
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: '#1c1917', marginTop: 3 }}>
+                    {stop.stop_name}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#78350f', marginTop: 4 }}>
+                    Sequence: <strong>Stop {stop.stop_order} of {stops.length}</strong>
+                  </div>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
       </MapContainer>
     </div>
   );
